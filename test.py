@@ -62,7 +62,7 @@ COLOR_MAPPING = {
     'Triumph': (255, 153, 204)
 }
 
-async def extract_emotions():
+async def extract_emotions(filename):
     # HUMEAI_API_KEY = os.getenv("HUMEAI_API_KEY")
     client = HumeStreamClient(HUMEAI_API_KEY)
     config = FaceConfig(identify_faces=True)
@@ -70,7 +70,7 @@ async def extract_emotions():
     async with client.connect([config]) as socket:
         while True:
             try:
-                result = await socket.send_file("./example.jpg")
+                result = await socket.send_file(filename)
                 emotions = result["face"]["predictions"][0]['emotions']
                 # yield emotions
                 return emotions
@@ -114,7 +114,8 @@ async def main():
 
     else:
         # 1번만 도는 ver
-        rgb = emotion_to_rgb(extract_emotions())
+        emotions = await extract_emotions("./hyeok.jpg")
+        rgb = emotion_to_rgb(emotions)
         logging.info(f"Calculated RGB: {rgb}")
         print("[ Emotions ]")
         pprint(top3_emotions(emotions))
