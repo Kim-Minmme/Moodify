@@ -1,14 +1,14 @@
 import os
-import asyncio
 import logging
 
 from hume import HumeStreamClient
 from hume.models.config import FaceConfig
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from fastapi import FastAPI
 
-# Color mapping defined as a constant
+hume_client = None
+hume_socket = None
+
 COLOR_MAPPING = {
     'Admiration': (255, 204, 153),
     'Adoration': (255, 153, 204),
@@ -58,20 +58,24 @@ COLOR_MAPPING = {
     'Triumph': (255, 153, 204)
 }
 
-async def extract_emotions():
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+async def initialize_hume_client():
+    global hume_client, hume_socket
     HUMEAI_API_KEY = os.getenv("HUMEAI_API_KEY")
-    client = HumeStreamClient(HUMEAI_API_KEY)
+    hume_client = HumeStreamClient(HUMEAI_API_KEY)
     config = FaceConfig(identify_faces=True)
-    
-    async with client.connect([config]) as socket:
-        while True:
-            try:
-                result = await socket.send_file("./example.jpg")
-                emotions = result["face"]["predictions"][0]['emotions']
-                yield emotions
-                await asyncio.sleep(1)  # Adjust the delay as needed
-            except Exception as e:
-                logging.error(f"An error occurred: {e}")
+    hume_socket = await hume_client.connect([config])
+
+async def extract_emotions(image):
+    global hume_socket
+    try:
+        result = await hume_socket.send_file(image)
+        emotions = result["face"]["predictions"][0]['emotions']
+        return emotions
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        return []
 
 def emotion_to_rgb(emotions):
     r, g, b = 0, 0, 0
@@ -92,10 +96,25 @@ def emotion_to_rgb(emotions):
 
     return (r, g, b)
 
-async def main():
-    async for emotions in extract_emotions():
-        rgb = emotion_to_rgb(emotions)
-        logging.info(f"Calculated RGB: {rgb}")
+app = FastAPI
+
+@app.on_event("startup")
+async def startup_event():
+    await initialize_hume_client()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global hume_socket
+    await hume_socket.close()
+
+@app.post("/upload/")
+async def upload_file(file):
+    image = await file.read()
+    emotions = await extract_emotions(image)
+    rgb = emotion_to_rgb(emotions)
+    logging.info(f"Calculated RGB: {rgb}")
+    return {"rgb": rgb}
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
