@@ -96,7 +96,7 @@ def emotion_to_rgb(emotions):
 
     return (r, g, b)
 
-app = FastAPI
+app = FastAPI()
 
 @app.on_event("startup")
 async def startup_event():
