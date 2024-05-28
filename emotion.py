@@ -102,15 +102,6 @@ def emotion_to_color(emotions):
 
 app = FastAPI()
 
-@app.on_event("startup")
-async def startup_event():
-    await initialize_hume_client()
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    global hume_socket
-    await hume_socket.close()
-
 class Item(BaseModel):
     image: str
 
@@ -122,6 +113,10 @@ async def create_color(item: Item):
     logging.info(f"Calculated RGB: {color}")
     return color
 
-if __name__ == "__main__":
+async def main():
+    await initialize_hume_client()
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=25565)
+
+if __name__ == "__main__":
+    main()
