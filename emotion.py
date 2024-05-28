@@ -10,52 +10,52 @@ hume_client = None
 hume_socket = None
 
 COLOR_MAPPING = {
-    'Admiration': (255, 204, 153),
-    'Adoration': (255, 153, 204),
-    'Aesthetic Appreciation': (153, 255, 204),
-    'Amusement': (255, 255, 153),
+    'Admiration': (255, 215, 0),
+    'Adoration': (255, 192, 203),
+    'Aesthetic Appreciation': (230, 230, 250),
+    'Amusement': (255, 165, 0),
     'Anger': (255, 0, 0),
-    'Anxiety': (255, 128, 0),
-    'Awe': (204, 153, 255),
-    'Awkwardness': (255, 204, 102),
+    'Anxiety': (173, 216, 230),
+    'Awe': (128, 0, 128),
+    'Awkwardness': (245, 245, 220),
     'Boredom': (128, 128, 128),
-    'Calmness': (102, 255, 178),
-    'Concentration': (0, 102, 204),
-    'Contemplation': (153, 102, 204),
-    'Confusion': (255, 102, 102),
-    'Contempt': (153, 0, 76),
-    'Contentment': (204, 255, 102),
-    'Craving': (255, 102, 255),
-    'Determination': (102, 51, 153),
-    'Disappointment': (102, 102, 255),
-    'Disgust': (102, 255, 102),
-    'Distress': (255, 102, 0),
-    'Doubt': (204, 102, 255),
-    'Ecstasy': (255, 0, 255),
-    'Embarrassment': (255, 204, 153),
-    'Empathic Pain': (255, 102, 51),
-    'Entrancement': (102, 255, 255),
-    'Envy': (0, 255, 0),
+    'Calmness': (152, 251, 152),
+    'Concentration': (0, 0, 255),
+    'Confusion': (165, 42, 42),
+    'Contemplation': (0, 128, 128),
+    'Contentment': (144, 238, 144),
+    'Craving': (139, 0, 0),
+    'Desire': (255, 105, 180),
+    'Determination': (0, 0, 139),
+    'Disappointment': (169, 169, 169),
+    'Disgust': (128, 128, 0),
+    'Distress': (139, 0, 139),
+    'Doubt': (255, 255, 224),
+    'Embarrassment': (240, 128, 128),
+    'Empathic Pain': (128, 0, 0),
+    'Entrancement': (0, 255, 255),
+    'Envy': (50, 205, 50),
     'Excitement': (255, 255, 0),
-    'Fear': (0, 0, 255),
-    'Guilt': (102, 102, 153),
-    'Horror': (51, 0, 102),
-    'Interest': (255, 153, 51),
-    'Joy': (255, 204, 0),
+    'Fear': (72, 61, 139),
+    'Guilt': (152, 251, 152),
+    'Horror': (0, 0, 0),
+    'Interest': (64, 224, 208),
+    'Joy': (255, 255, 0),
     'Love': (255, 0, 0),
-    'Pride': (204, 102, 0),
-    'Realization': (0, 204, 255),
-    'Relief': (102, 255, 153),
-    'Romance': (255, 51, 153),
-    'Sadness': (0, 0, 102),
-    'Satisfaction': (204, 255, 51),
-    'Desire': (255, 0, 255),
-    'Shame': (153, 0, 51),
-    'Surprise (negative)': (204, 0, 204),
-    'Surprise (positive)': (204, 204, 0),
-    'Sympathy': (255, 102, 178),
-    'Tiredness': (102, 102, 102),
-    'Triumph': (255, 153, 204)
+    'Nostalgia': (112, 66, 20),
+    'Pain': (139, 0, 0),
+    'Pride': (128, 0, 128),
+    'Realization': (173, 216, 230),
+    'Relief': (144, 238, 144),
+    'Romance': (255, 192, 203),
+    'Sadness': (0, 0, 255),
+    'Satisfaction': (144, 238, 144),
+    'Shame': (139, 0, 0),
+    'Surprise (negative)': (255, 69, 0),
+    'Surprise (positive)': (255, 215, 0),
+    'Sympathy': (255, 255, 224),
+    'Tiredness': (175, 238, 238),
+    'Triumph': (255, 215, 0)
 }
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -77,7 +77,10 @@ async def extract_emotions(image):
         logging.error(f"An error occurred: {e}")
         return []
 
-def emotion_to_rgb(emotions):
+def int_to_hex(r, g, b):
+    return f'#{r:02x}{g:02x}{b:02x}'
+
+def emotion_to_color(emotions):
     r, g, b = 0, 0, 0
     total_score = 0
 
@@ -94,7 +97,7 @@ def emotion_to_rgb(emotions):
         g = int(g / total_score)
         b = int(b / total_score)
 
-    return (r, g, b)
+    return int_to_hex(r, g, b)
 
 app = FastAPI()
 
@@ -111,10 +114,10 @@ async def shutdown_event():
 async def upload_file(file):
     image = await file.read()
     emotions = await extract_emotions(image)
-    rgb = emotion_to_rgb(emotions)
-    logging.info(f"Calculated RGB: {rgb}")
-    return {"rgb": rgb}
+    color = emotion_to_color(emotions)
+    logging.info(f"Calculated RGB: {color}")
+    return color
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=25565)
