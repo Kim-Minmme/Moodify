@@ -61,12 +61,12 @@ COLOR_MAPPING = {
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-async def initialize_hume_client():
+def initialize_hume_client():
     global hume_client, hume_socket
     HUMEAI_API_KEY = os.getenv("HUMEAI_API_KEY")
     hume_client = HumeStreamClient(HUMEAI_API_KEY)
     config = FaceConfig(identify_faces=True)
-    hume_socket = await hume_client.connect([config])
+    hume_socket = hume_client.connect([config])
 
 async def extract_emotions(image):
     global hume_socket
@@ -113,11 +113,7 @@ async def create_color(item: Item):
     logging.info(f"Calculated RGB: {color}")
     return {"color": color}
 
-async def main():
-    await initialize_hume_client()
+if __name__ == "__main__":
+    initialize_hume_client()
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=25565)
-
-if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
