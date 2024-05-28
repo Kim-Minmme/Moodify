@@ -111,7 +111,7 @@ async def create_color(item: Item):
     emotions = await extract_emotions(image)
     color = emotion_to_color(emotions)
     logging.info(f"Calculated RGB: {color}")
-    return color
+    return {"color": color}
 
 async def main():
     await initialize_hume_client()
@@ -119,4 +119,5 @@ async def main():
     uvicorn.run(app, host="0.0.0.0", port=25565)
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
