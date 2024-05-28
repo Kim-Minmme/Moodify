@@ -5,6 +5,7 @@ from hume import HumeStreamClient
 from hume.models.config import FaceConfig
 
 from fastapi import FastAPI
+from pydantic import BaseModel
 
 hume_client = None
 hume_socket = None
@@ -70,7 +71,7 @@ async def initialize_hume_client():
 async def extract_emotions(image):
     global hume_socket
     try:
-        result = await hume_socket.send_file(image)
+        result = await hume_socket.send_bytes(image)
         emotions = result["face"]["predictions"][0]['emotions']
         return emotions
     except Exception as e:
@@ -110,9 +111,12 @@ async def shutdown_event():
     global hume_socket
     await hume_socket.close()
 
-@app.post("/upload/")
-async def upload_file(file):
-    image = await file.read()
+class Item(BaseModel):
+    image: str
+
+@app.post("/create/color/")
+async def create_color(item: Item):
+    image = item.image
     emotions = await extract_emotions(image)
     color = emotion_to_color(emotions)
     logging.info(f"Calculated RGB: {color}")
