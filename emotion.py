@@ -71,7 +71,7 @@ def initialize_hume_client():
 async def extract_emotions(image):
     global hume_socket
     try:
-        result = await hume_socket.send_bytes(image)
+        result = await hume_socket.send_bytes(bytes([ord(c) for c in image]))
         emotions = result["face"]["predictions"][0]['emotions']
         return emotions
     except Exception as e:
