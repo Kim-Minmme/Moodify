@@ -7,6 +7,8 @@ from hume.models.config import FaceConfig
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+import asyncio
+
 hume_client = None
 hume_socket = None
 
@@ -71,7 +73,7 @@ def initialize_hume_client():
 async def extract_emotions(image):
     global hume_socket
     try:
-        result = await hume_socket.send_bytes(bytes([ord(c) for c in image]))
+        result = await hume_socket.send_bytes(image)
         emotions = result["face"]["predictions"][0]['emotions']
         return emotions
     except Exception as e:
@@ -113,7 +115,10 @@ async def create_color(item: Item):
     logging.info(f"Calculated RGB: {color}")
     return {"color": color}
 
-if __name__ == "__main__":
+async def main():
     initialize_hume_client()
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=25565)
+
+if __name__ == "__main__":
+    asyncio.run(main())
