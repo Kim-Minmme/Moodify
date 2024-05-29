@@ -4,13 +4,7 @@ import logging
 from hume import HumeStreamClient
 from hume.models.config import FaceConfig
 
-from fastapi import FastAPI
-from pydantic import BaseModel
-
-import asyncio
-
-hume_client = None
-hume_socket = None
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 COLOR_MAPPING = {
     'Admiration': (255, 215, 0),
@@ -61,17 +55,16 @@ COLOR_MAPPING = {
     'Triumph': (255, 215, 0)
 }
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-def initialize_hume_client():
-    global hume_client, hume_socket
+def init_hume_client():
     HUMEAI_API_KEY = os.getenv("HUMEAI_API_KEY")
+    if not HUMEAI_API_KEY:
+        raise EnvironmentError("HUMEAI_API_KEY environment variable not set")
+
     hume_client = HumeStreamClient(HUMEAI_API_KEY)
     config = FaceConfig(identify_faces=True)
-    hume_socket = hume_client.connect([config])
+    return hume_client.connect([config])
 
-async def extract_emotions(image):
-    global hume_socket
+async def extract_emotions(hume_socket, image):
     try:
         result = await hume_socket.send_bytes(image)
         emotions = result["face"]["predictions"][0]['emotions']
@@ -101,24 +94,3 @@ def emotion_to_color(emotions):
         b = int(b / total_score)
 
     return int_to_hex(r, g, b)
-
-app = FastAPI()
-
-class Item(BaseModel):
-    image: str
-
-@app.post("/create/color/")
-async def create_color(item: Item):
-    image = item.image
-    emotions = await extract_emotions(image)
-    color = emotion_to_color(emotions)
-    logging.info(f"Calculated RGB: {color}")
-    return {"color": color}
-
-async def main():
-    initialize_hume_client()
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=25565)
-
-if __name__ == "__main__":
-    asyncio.run(main())
