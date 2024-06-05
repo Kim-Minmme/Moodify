@@ -1,4 +1,3 @@
-import os
 import logging
 
 from hume import HumeStreamClient
@@ -56,19 +55,18 @@ COLOR_MAPPING = {
 }
 
 def init_hume_client():
-    HUMEAI_API_KEY = os.getenv("HUMEAI_API_KEY")
-    if not HUMEAI_API_KEY:
-        raise EnvironmentError("HUMEAI_API_KEY environment variable not set")
+    with open("./HUMEAI_API.key", "r") as key:
+        HUMEAI_API_KEY = key.read()
+        hume_client = HumeStreamClient(HUMEAI_API_KEY)
+        config = FaceConfig(identify_faces=True)
+        return hume_client, config
 
-    hume_client = HumeStreamClient(HUMEAI_API_KEY)
-    config = FaceConfig(identify_faces=True)
-    return hume_client.connect([config])
-
-async def extract_emotions(hume_socket, image):
+async def extract_emotions(hume_client, config, image):
     try:
-        result = await hume_socket.send_bytes(image)
-        emotions = result["face"]["predictions"][0]['emotions']
-        return emotions
+        async with hume_client.connect([config]) as socket:
+            result = await socket._send_str(image, raw_text=False, configs=[config])
+            emotions = result["face"]["predictions"][0]['emotions']
+            return emotions
     except Exception as e:
         logging.error(f"An error occurred: {e}")
         return []
