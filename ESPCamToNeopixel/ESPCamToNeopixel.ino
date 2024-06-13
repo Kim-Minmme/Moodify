@@ -9,31 +9,26 @@
 #include "camera_pins.h"
 #define CAMERA_RESOLUTION FRAMESIZE_SVGA
 
-#define NEO_PIN 6
-#define NUMPIXELS 12
-Adafruit_NeoPixel pixels(NUMPIXELS, NEO_PIN, NEO_GRB + NEO_KHZ800);
-
-const char* ssid = "Minme-Kim";
-const char* password = "d}<4&WSG9c-Zz?k1z='V?o04F";
+const char* ssid = "jwjung";
+const char* password = "01027075860";
 const char* serverUrl = "http://125.180.95.161:20090/create/color";
 
-String httpPost(String serverUrl, String jsonData);
-void modifyColor(const char* hexColor);
-void hexToRGB(const char* hex, uint8_t &r, uint8_t &g, uint8_t &b);
-bool initializeCamera();
+#define PIN 12
+#define NUMPIXELS 12
+
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
   Serial.begin(115200);
-
   WiFi.begin(ssid, password);
+
+  // WiFi 연결 시도
   Serial.print("Connecting to WiFi...");
-  int retries = 0;
-  while (WiFi.status() != WL_CONNECTED && retries < 20) {
+  for (int retries = 0; WiFi.status() != WL_CONNECTED && retries < 20; retries++) {
     delay(1000);
     Serial.print(".");
-    retries++;
   }
-  
+
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("\nFailed to connect to WiFi");
     return;
@@ -41,23 +36,26 @@ void setup() {
 
   Serial.println("\nConnected to WiFi");
 
+  // 카메라 초기화
   if (!initializeCamera()) {
     Serial.println("Camera initialization failed");
     return;
   }
 
+  // 네오픽셀 초기화
   pixels.begin();
-  pixels.show();
 }
 
 void loop() {
+  // WiFi 상태 확인 및 재연결 시도
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi Disconnected, attempting to reconnect...");
     WiFi.reconnect();
-    delay(5000);
+    delay(3000);
     return;
   }
 
+  // 카메라 캡처
   camera_fb_t* fb = esp_camera_fb_get();
   if (!fb) {
     Serial.println("Camera capture failed");
@@ -65,64 +63,36 @@ void loop() {
     return;
   }
 
+  // 이미지 base64 인코딩 및 전송
   String base64Image = base64::encode((uint8_t*)fb->buf, fb->len);
   String jsonData = "{\"image\":\"" + base64Image + "\"}";
   Serial.println(base64Image);
 
   String hexColor = httpPost(serverUrl, jsonData);
-  if (hexColor != NULL && hexColor.length() == 7) {
-    modifyColor(hexColor.c_str());
-  } else {
-    Serial.println("Invalid HEX color received");
-  }
+  Serial.println(hexColor);
 
+  // 네오픽셀 색상 설정
+  setNeoPixelColor(hexColor);
   esp_camera_fb_return(fb);
-  delay(5000);
+  delay(1000);
 }
 
-String httpPost(String serverUrl, String jsonData) {
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
-    
-    int httpResponseCode = http.POST(jsonData);
-    if (httpResponseCode > 0) {
-      String response = http.getString();
-      Serial.println(httpResponseCode);
-      http.end();
-      return response;
-    } else {
-      Serial.print("Error on sending POST: ");
-      Serial.println(httpResponseCode);
-      http.end();
-      return "";
-    }
+String httpPost(const char* serverUrl, const String& jsonData) {
+  HTTPClient http;
+  http.begin(serverUrl);
+  http.addHeader("Content-Type", "application/json");
+
+  int httpResponseCode = http.POST(jsonData);
+  if (httpResponseCode > 0) {
+    String response = http.getString();
+    Serial.println(httpResponseCode);
+    http.end();
+    return response;
   } else {
-    Serial.println("WiFi Disconnected");
+    Serial.print("Error on sending POST: ");
+    Serial.println(httpResponseCode);
+    http.end();
     return "";
-  }
-}
-
-void modifyColor(const char* hexColor) {
-  uint8_t r, g, b;
-  hexToRGB(hexColor, r, g, b);
-  
-  for(int i = 0; i < NUMPIXELS; i++) {
-    pixels.setPixelColor(i, pixels.Color(r, g, b));
-  }
-  pixels.show();
-}
-
-void hexToRGB(const char* hex, uint8_t& r, uint8_t& g, uint8_t& b) {
-  if (hex[0] == '#') {
-    uint32_t color = strtoul(hex + 1, NULL, 16);
-    r = (color >> 16) & 0xFF;
-    g = (color >> 8) & 0xFF;
-    b = color & 0xFF;
-  } else {
-    r = g = b = 0;
   }
 }
 
@@ -180,4 +150,15 @@ bool initializeCamera() {
   }
 
   return true;
+}
+
+void setNeoPixelColor(const String& hexString) {
+  uint8_t r = strtol(hexString.substring(2, 4).c_str(), NULL, 16);
+  uint8_t g = strtol(hexString.substring(4, 6).c_str(), NULL, 16);
+  uint8_t b = strtol(hexString.substring(6, 8).c_str(), NULL, 16);
+
+  for (int i = 0; i < NUMPIXELS; i++) {
+    pixels.setPixelColor(i, pixels.Color(r, g, b));
+  }
+  pixels.show();
 }
